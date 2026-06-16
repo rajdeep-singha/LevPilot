@@ -3,9 +3,14 @@ import express from 'express';
 import cors from 'cors';
 import { env } from './config/env.js';
 import { agentRouter } from './routes/agent.js';
+import { tradeRouter } from './routes/trade.js';
+import { positionsRouter } from './routes/positions.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { chatRateLimit } from './middleware/rateLimit.js';
 import { optionalAuth } from './middleware/auth.js';
+import { initPolicyEngine } from './engines/policy/policyEngine.js';
+import { initMarketEngine } from './engines/market/marketEngine.js';
+import { initRiskEngine } from './engines/risk/riskEngine.js';
 
 const app = express();
 
@@ -21,9 +26,16 @@ app.get('/health', (_req, res) => {
 
 // ── Feature routes ─────────────────────────────────────────────────────────
 app.use('/agent', chatRateLimit, agentRouter);
+app.use('/trade', tradeRouter);
+app.use('/positions', positionsRouter);
 
 // ── Error handler (must be last) ───────────────────────────────────────────
 app.use(errorHandler);
+
+// ── Initialise engines (self-register into toolRegistry) ───────────────────
+initPolicyEngine();
+initMarketEngine();
+initRiskEngine();
 
 app.listen(env.PORT, () => {
   console.log(`🚀 LevPilot server on :${env.PORT} [${env.SUI_NETWORK}]`);
