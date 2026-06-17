@@ -3,20 +3,25 @@ import { fetchPrice } from './oracle.js';
 import type { AssetSymbol } from '../../config/sui.js';
 
 // ── Testnet Pool IDs ───────────────────────────────────────────────────────
-// Source: https://docs.deepbook.tech — fill in actual testnet addresses
-// These are placeholders until verified from DeepBook testnet docs
+// Source: MystenLabs/ts-sdks → packages/deepbook-v3/src/utils/constants.ts
+// NOTE: Testnet uses synthetic tokens — DBUSDC (not real USDC), DBTC (not WBTC).
+//       There is NO ETH/WETH pool on DeepBook v3 testnet.
+//       Pool keys use _USDC suffix for compatibility with resolvePoolKey() below.
 export const DEEPBOOK_POOLS: Record<string, string> = {
-  'SUI_USDC': '0x4405b50d791fd3346754e8171aaab6bc2ed26c2c46efdd033c14b30ae507ac33',
-  'WETH_USDC': '0xf3114a74d54cbe56b3e68f9306661c043ede8c6615f0351b98f5360a8d95b387',
-  'WBTC_USDC': '0xd109e39c3bb8a7ea96f8b8f8b2bab3a4c738a7efc8c03ae68b0fba42ae6c9a49',
+  'SUI_USDC':  '0x1c19362ca52b8ffd7a33cee805a67d40f31e6ba303753fd3a4cfdfacea7163a5', // SUI/DBUSDC
+  'WBTC_USDC': '0x0dce0aa771074eb83d1f4a29d48be8248d4d2190976a5241f66b43ec18fa34de', // DBTC/DBUSDC
+  // ETH/WETH pool does not exist on DeepBook v3 testnet — ETH trades unsupported
 };
 
-// Coin types on Sui testnet
+// Coin types on Sui testnet — only assets with verified DeepBook v3 pools
+// Source: MystenLabs/ts-sdks packages/deepbook-v3/src/utils/constants.ts
 export const COIN_TYPES: Record<string, string> = {
-  SUI: '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
-  USDC: '0xa1ec7fc00a6f40db9d4addba4e12769a539d7f746e82f35e47b99d76cfb38093::usdc::USDC',
-  WETH: '0xf3e378f3d7571a94af8e28ff04fa5e32a04a1eb393de2b3d5b6b7fb85d32b37b::eth::ETH',
-  WBTC: '0x4e9e39e2efc6ede2e7a2dd9eeaa49c35fcbf04d0fcb7f9c1b41e1b91e024a07::btc::BTC',
+  SUI:    '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+  // Testnet uses DBUSDC (DeepBook synthetic USDC) — treat as USDC in the app
+  USDC:   '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::dbusdc::DBUSDC',
+  // Testnet uses DBTC (DeepBook synthetic BTC) — treat as BTC in the app
+  BTC:    '0xe4099a9e60c10e52c42b8e5e8aaeb3e30c36e46d1cfd7dab9d44a3c0e8d1a87::dbtc::DBTC',
+  // ETH has no pool on DeepBook v3 testnet — omitted
 };
 
 // ── Slippage Cache ─────────────────────────────────────────────────────────

@@ -60,10 +60,8 @@ export async function buildLongPTB(
   // Fetch user's USDC coin for capital
   const capitalCoin = await resolveUserCoin(tx, walletAddress, intent.collateral, capitalUnits);
 
-  // Need to pass a market object — for now we use a placeholder approach
-  // The actual Scallop market object ID must be fetched from the Scallop protocol
-  // TODO: replace with real Scallop market object ID once confirmed for testnet
-  const marketObj = tx.object('0x0'); // placeholder — update with real Scallop market ID
+  // Scallop shared Market object — verified from scallop-io/sui-scallop-sdk testAddress.ts (core.market)
+  const marketObj = tx.object('0xa7f41efe3b551c20ad6d6cea6ccd0fd68d2e2eaaacdca5e62d956209f6a51312');
 
   const { obligationKey, obligationId } = scallopDepositCollateral(
     tx,

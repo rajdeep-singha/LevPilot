@@ -20,7 +20,8 @@ export interface Position {
   openedAt: number;            // unix ms
   updatedAt: number;
   status: PositionStatus;
-  scallopObligationId?: string;
+  scallopObligationId?: string;   // shared Obligation object ID (needed for exit PTB)
+  scallopObligationKeyId?: string; // owned ObligationKey object ID (capability NFT)
   deepbookOrderId?: string;
   planId?: string;             // links back to the ExecutionPlan that opened this
 }

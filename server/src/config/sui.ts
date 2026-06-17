@@ -38,4 +38,5 @@ export const CONTRACT_ADDRESSES = {
   },
 } as const;
 
-export type AssetSymbol = 'SUI' | 'BTC' | 'ETH' | 'USDC' | 'USDT';
+// ETH has no DeepBook v3 pool on testnet — omitted until mainnet
+export type AssetSymbol = 'SUI' | 'BTC' | 'USDC' | 'USDT';

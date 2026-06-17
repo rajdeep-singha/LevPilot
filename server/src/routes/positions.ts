@@ -1,30 +1,98 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { getPlan } from '../agent/orchestrator.js';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import type { Position } from '../types/position.js';
+import { persistPosition } from '../walrus/persist.js';
+import { retrieveAllPositions } from '../walrus/retrieve.js';
 
 export const positionsRouter = Router();
 
-// In-memory position store — derived from executed plans.
-// Later phases will query Scallop obligations + DeepBook orders on-chain for live data.
+// ── Position store ─────────────────────────────────────────────────────────
+// In-memory primary store — fast reads, restored from Walrus on startup.
+// Index file maps positionId → latest Walrus blob ID for persistence across restarts.
+
+const INDEX_FILE = '.position-index.json';
 const positionStore = new Map<string, Position>();
 
-/** Called by executor after a successful LONG/SHORT execution */
-export function recordPosition(position: Position): void {
-  positionStore.set(position.id, position);
+function loadIndex(): Record<string, string> {
+  if (!existsSync(INDEX_FILE)) return {};
+  try {
+    return JSON.parse(readFileSync(INDEX_FILE, 'utf-8')) as Record<string, string>;
+  } catch {
+    return {};
+  }
 }
 
-/** Called by monitoring layer to update price / health factor */
-export function updatePosition(id: string, updates: Partial<Position>): void {
-  const pos = positionStore.get(id);
-  if (pos) positionStore.set(id, { ...pos, ...updates, updatedAt: Date.now() });
+function saveIndex(index: Record<string, string>): void {
+  try {
+    writeFileSync(INDEX_FILE, JSON.stringify(index, null, 2));
+  } catch (err) {
+    console.warn('[Positions] Failed to write position index:', err);
+  }
 }
+
+/** Restores positions from Walrus into memory on server startup */
+async function restoreFromWalrus(): Promise<void> {
+  const index = loadIndex();
+  if (Object.keys(index).length === 0) return;
+
+  console.log(`[Positions] Restoring ${Object.keys(index).length} positions from Walrus…`);
+  const positions = await retrieveAllPositions(index);
+  for (const pos of positions) {
+    positionStore.set(pos.id, pos);
+  }
+  console.log(`[Positions] Restored ${positions.length} positions.`);
+}
+
+// Kick off restore on module load (non-blocking)
+restoreFromWalrus().catch((err) =>
+  console.warn('[Positions] Walrus restore failed, starting empty:', err),
+);
+
+// ── Write helpers ──────────────────────────────────────────────────────────
+
+/** Called by executor after a successful LONG/SHORT execution */
+export async function recordPosition(position: Position): Promise<void> {
+  positionStore.set(position.id, position);
+
+  // Persist to Walrus asynchronously — don't block the response
+  persistPosition(position)
+    .then((blobId) => {
+      const index = loadIndex();
+      index[position.id] = blobId;
+      saveIndex(index);
+      console.log(`[Positions] Persisted ${position.id} → Walrus blob ${blobId}`);
+    })
+    .catch((err) =>
+      console.warn(`[Positions] Walrus persist failed for ${position.id}:`, err),
+    );
+}
+
+/** Called by monitoring layer or executor to update price / health factor / status */
+export async function updatePosition(id: string, updates: Partial<Position>): Promise<void> {
+  const pos = positionStore.get(id);
+  if (!pos) return;
+
+  const updated = { ...pos, ...updates, updatedAt: Date.now() };
+  positionStore.set(id, updated);
+
+  // Persist updated snapshot to Walrus
+  persistPosition(updated)
+    .then((blobId) => {
+      const index = loadIndex();
+      index[id] = blobId; // overwrite with latest blob
+      saveIndex(index);
+    })
+    .catch((err) =>
+      console.warn(`[Positions] Walrus update persist failed for ${id}:`, err),
+    );
+}
+
+// ── Routes ─────────────────────────────────────────────────────────────────
 
 /**
  * GET /positions/:address
- *
  * Returns all open positions for a wallet address.
- * Initially derived from executed plans; later will include live on-chain data.
  */
 positionsRouter.get('/:address', (req: Request, res: Response) => {
   const parsed = z
@@ -45,7 +113,6 @@ positionsRouter.get('/:address', (req: Request, res: Response) => {
 
 /**
  * GET /positions/:address/:positionId
- *
  * Returns a single position by ID.
  */
 positionsRouter.get('/:address/:positionId', (req: Request, res: Response) => {
@@ -55,3 +122,8 @@ positionsRouter.get('/:address/:positionId', (req: Request, res: Response) => {
   }
   return res.json(pos);
 });
+
+/** Exposed for executor to look up obligation IDs when building exit PTBs */
+export function getPosition(positionId: string): Position | undefined {
+  return positionStore.get(positionId);
+}

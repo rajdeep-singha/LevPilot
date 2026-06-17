@@ -1,6 +1,7 @@
 export type TradeAction = 'LONG' | 'SHORT' | 'EXIT' | 'REDUCE' | 'ADD_COLLATERAL' | 'REPAY';
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
-export type AssetSymbol = 'SUI' | 'BTC' | 'ETH' | 'USDC' | 'USDT';
+// ETH has no DeepBook v3 pool on testnet — omitted until mainnet
+export type AssetSymbol = 'SUI' | 'BTC' | 'USDC' | 'USDT';
 
 export interface TradeIntent {
   action: TradeAction;
@@ -11,6 +12,7 @@ export interface TradeIntent {
   risk: RiskLevel;
   rawMessage: string;
   timestamp: number;
+  positionId?: string;       // required for EXIT/REDUCE — links to the Position being closed
 }
 
 export interface IntentParseResult {

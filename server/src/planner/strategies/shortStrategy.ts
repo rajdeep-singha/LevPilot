@@ -51,7 +51,8 @@ export async function buildShortPTB(
   const clock = clockArg(tx);
   const registry = deepbookRegistryArg(tx);
 
-  const marketObj = tx.object('0x0'); // TODO: real Scallop market object ID
+  // Scallop shared Market object — verified from scallop-io/sui-scallop-sdk testAddress.ts (core.market)
+  const marketObj = tx.object('0xa7f41efe3b551c20ad6d6cea6ccd0fd68d2e2eaaacdca5e62d956209f6a51312');
 
   // Step 1 — Deposit USDC collateral
   const capitalCoin = await resolveUserCoin(tx, walletAddress, intent.collateral, capitalUnits);

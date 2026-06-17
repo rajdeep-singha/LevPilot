@@ -4,10 +4,10 @@ import type { AssetSymbol } from '../../config/sui.js';
 const HERMES_URL = 'https://hermes.pyth.network/v2/updates/price/latest';
 
 // Network-wide Pyth price feed IDs (same for testnet and mainnet via Hermes)
+// ETH removed — no DeepBook v3 testnet pool, not a supported trading asset
 const FEED_IDS: Partial<Record<AssetSymbol, string>> = {
   SUI: '0x50c67b3fd225db8912a424dd4baed60ffdde625ed2feaaf283724f9608fea266',
   BTC: '0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b',
-  ETH: '0xca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6',
 };
 
 const STABLE_PRICE: Partial<Record<AssetSymbol, number>> = {

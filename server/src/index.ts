@@ -7,7 +7,7 @@ import { tradeRouter } from './routes/trade.js';
 import { positionsRouter } from './routes/positions.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { chatRateLimit } from './middleware/rateLimit.js';
-import { optionalAuth } from './middleware/auth.js';
+import { optionalAuth, handleAuthChallenge, handleAuthVerify } from './middleware/auth.js';
 import { initPolicyEngine } from './engines/policy/policyEngine.js';
 import { initMarketEngine } from './engines/market/marketEngine.js';
 import { initRiskEngine } from './engines/risk/riskEngine.js';
@@ -25,6 +25,8 @@ app.get('/health', (_req, res) => {
 });
 
 // ── Feature routes ─────────────────────────────────────────────────────────
+app.post('/auth/challenge', handleAuthChallenge);
+app.post('/auth/verify', handleAuthVerify);
 app.use('/agent', chatRateLimit, agentRouter);
 app.use('/trade', tradeRouter);
 app.use('/positions', positionsRouter);
