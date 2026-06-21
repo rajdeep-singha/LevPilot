@@ -7,7 +7,7 @@ import type {
   RiskLevel,
 } from '../types/intent.js';
 
-const client = new Anthropic();
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Claude tool definition for structured intent extraction
 const EXTRACT_INTENT_TOOL: Anthropic.Tool = {

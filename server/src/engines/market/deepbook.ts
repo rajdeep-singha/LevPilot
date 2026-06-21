@@ -9,7 +9,7 @@ import type { AssetSymbol } from '../../config/sui.js';
 //       Pool keys use _USDC suffix for compatibility with resolvePoolKey() below.
 export const DEEPBOOK_POOLS: Record<string, string> = {
   'SUI_USDC':  '0x1c19362ca52b8ffd7a33cee805a67d40f31e6ba303753fd3a4cfdfacea7163a5', // SUI/DBUSDC
-  'WBTC_USDC': '0x0dce0aa771074eb83d1f4a29d48be8248d4d2190976a5241f66b43ec18fa34de', // DBTC/DBUSDC
+  'BTC_USDC':  '0x0dce0aa771074eb83d1f4a29d48be8248d4d2190976a5241f66b43ec18fa34de', // DBTC/DBUSDC
   // ETH/WETH pool does not exist on DeepBook v3 testnet — ETH trades unsupported
 };
 

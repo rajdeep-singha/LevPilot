@@ -7,7 +7,7 @@ import type { TradeIntent } from '../types/intent.js';
 import type { RiskReport } from '../types/risk.js';
 import type { MarketData } from './toolRegistry.js';
 
-const client = new Anthropic();
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── In-memory plan store (swap for Redis in production) ────────────────────
 const planStore = new Map<string, ExecutionPlan>();

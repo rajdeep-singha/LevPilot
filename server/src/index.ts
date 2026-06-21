@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+const __dotenvDir = fileURLToPath(new URL('.', import.meta.url));
+config({ path: resolve(__dotenvDir, '../../.env') });
 import express from 'express';
 import cors from 'cors';
 import { env } from './config/env.js';

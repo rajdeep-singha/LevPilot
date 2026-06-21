@@ -1,5 +1,5 @@
 // Scallop market data via public REST API — no SDK needed for read-only queries
-const SCALLOP_MARKET_URL = 'https://sui-api.scallop.io/market';
+const SCALLOP_MARKET_URL = 'https://api.scallop.io/api/market';
 
 export interface ScallopMarket {
   borrowAPY: Record<string, number>;       // asset → current borrow APY %

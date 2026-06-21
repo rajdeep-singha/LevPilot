@@ -43,9 +43,17 @@ const riskEngine: RiskEngineFunc = async (intent) => {
   const riskGrade = scoreToGrade(riskScore);
 
   // ── Health factor ──────────────────────────────────────────────────────
+  // After executing the trade, the collateral is the total position (capital × leverage):
+  //   LONG: holding the asset bought with leverage → use asset's CF
+  //   SHORT: holding USDC from selling borrowed asset → use collateral's CF
+  const postTradeCf =
+    side === 'LONG'
+      ? (scallop.collateralFactor[intent.asset] ?? 0.75)
+      : cf;
+
   const healthFactorAfter = calculateHealthFactor({
-    collateralAmountUsd: intent.capital,
-    collateralFactor: cf,
+    collateralAmountUsd: totalPositionUsd,
+    collateralFactor: postTradeCf,
     borrowedAmountUsd: borrowedUsd,
   });
 
