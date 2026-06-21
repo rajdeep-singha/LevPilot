@@ -13,6 +13,7 @@ import {
   type TransactionArgument,
   type TransactionObjectArgument,
 } from '@mysten/sui/transactions';
+import type { CoinStruct } from '@mysten/sui/client';
 import { getSuiClient } from '../config/sui.js';
 import { CONTRACT_ADDRESSES } from '../config/sui.js';
 import { getCoinType } from '../engines/market/deepbook.js';
@@ -55,7 +56,7 @@ export async function resolveUserCoin(
   }
 
   // Sort descending by balance
-  coins.sort((a, b) => Number(BigInt(b.balance) - BigInt(a.balance)));
+  coins.sort((a: CoinStruct, b: CoinStruct) => Number(BigInt(b.balance) - BigInt(a.balance)));
 
   const primaryCoin = tx.object(coins[0].coinObjectId);
 

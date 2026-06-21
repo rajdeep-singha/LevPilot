@@ -102,7 +102,7 @@ export async function parseIntent(userMessage: string): Promise<IntentParseResul
       messages: [{ role: 'user', content: userMessage }],
     });
 
-    const toolUse = response.content.find((b) => b.type === 'tool_use');
+    const toolUse = response.content.find((b: { type: string }) => b.type === 'tool_use');
     if (!toolUse || toolUse.type !== 'tool_use') {
       return { success: false, error: 'No structured intent returned by model' };
     }
