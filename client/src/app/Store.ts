@@ -49,12 +49,17 @@ interface PositionsState {
   setLoading: (v: boolean) => void
 }
 
-export const usePositionsStore = create<PositionsState>((set) => ({
-  positions: [],
-  loading: false,
-  setPositions: (positions) => set({ positions }),
-  setLoading: (v) => set({ loading: v }),
-}))
+export const usePositionsStore = create<PositionsState>()(
+  persist(
+    (set) => ({
+      positions: [],
+      loading: false,
+      setPositions: (positions) => set({ positions }),
+      setLoading: (v) => set({ loading: v }),
+    }),
+    { name: 'levpilot-positions' },
+  ),
+)
 
 interface UIState {
   selectedAsset: string

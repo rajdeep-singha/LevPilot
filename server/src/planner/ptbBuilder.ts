@@ -212,12 +212,19 @@ export function scallopWithdrawCollateral(
 
 // ── DeepBook wrappers ──────────────────────────────────────────────────────
 
+// DEEP token coin type on testnet — verified from on-chain pool module parameter types
+const DEEP_COIN_TYPE =
+  '0x36dbef866a1d62bf7328989a10fb2f07d769f4ee587c0de4a0a256e57e0a58a8::deep::DEEP';
+
 /**
- * Places a market order on a DeepBook pool.
- * isBid = true  → buy base with quote (e.g. buy SUI with USDC)
- * isBid = false → sell base for quote (e.g. sell SUI for USDC)
+ * Places a market order on a DeepBook V3 pool.
+ * isBid = true  → buy base with quote (e.g. buy SUI with USDC) → swap_exact_quote_for_base
+ * isBid = false → sell base for quote (e.g. sell SUI for USDC) → swap_exact_base_for_quote
  *
- * Returns the output coin.
+ * DeepBook V3 requires a DEEP fee coin on every swap. We pass a zero-balance
+ * DEEP coin — any fee is deducted from the output or ignored if subsidised.
+ * Type args are always [BaseCoinType, QuoteCoinType].
+ * Returns the primary output coin (base when buying, quote when selling).
  */
 export function deepbookSwap(
   tx: Transaction,
@@ -228,7 +235,8 @@ export function deepbookSwap(
   minOutputUnits: bigint,
   isBid: boolean,
   clockArg: TransactionArgument,
-  deepbookRegistry: TransactionArgument,
+  _deepbookRegistry: TransactionArgument,
+  senderAddress: string,
 ): TransactionArgument {
   const packageId = CONTRACT_ADDRESSES.deepbook.packageId;
   const baseCoinType = getCoinType(baseAsset);
@@ -236,19 +244,32 @@ export function deepbookSwap(
 
   const pool = tx.object(poolId);
 
-  const [outputCoin] = tx.moveCall({
-    target: `${packageId}::pool::swap_exact_base_for_quote`,
-    typeArguments: isBid ? [quoteCoinType, baseCoinType] : [baseCoinType, quoteCoinType],
-    arguments: [
-      pool,
-      deepbookRegistry,
-      inputCoin,
-      tx.pure.u64(minOutputUnits),
-      clockArg,
-    ],
-  }) as unknown as [TransactionArgument];
+  // DeepBook V3 requires a DEEP fee coin on every swap; pass zero, remainder returned
+  const [zeroDEEP] = tx.moveCall({
+    target: '0x2::coin::zero',
+    typeArguments: [DEEP_COIN_TYPE],
+  }) as unknown as [TransactionObjectArgument];
 
-  return outputCoin;
+  if (isBid) {
+    // Buying base (e.g. SUI) with quote (e.g. USDC)
+    const [baseCoinOut, quoteCoinOut, deepCoinOut] = tx.moveCall({
+      target: `${packageId}::pool::swap_exact_quote_for_base`,
+      typeArguments: [baseCoinType, quoteCoinType],
+      arguments: [pool, inputCoin, zeroDEEP, tx.pure.u64(minOutputUnits), clockArg],
+    }) as unknown as [TransactionObjectArgument, TransactionObjectArgument, TransactionObjectArgument];
+    // Return dust (unused quote + unused DEEP) to sender
+    tx.transferObjects([quoteCoinOut, deepCoinOut], senderAddress);
+    return baseCoinOut;
+  } else {
+    // Selling base (e.g. SUI) for quote (e.g. USDC)
+    const [baseCoinOut, quoteCoinOut, deepCoinOut] = tx.moveCall({
+      target: `${packageId}::pool::swap_exact_base_for_quote`,
+      typeArguments: [baseCoinType, quoteCoinType],
+      arguments: [pool, inputCoin, zeroDEEP, tx.pure.u64(minOutputUnits), clockArg],
+    }) as unknown as [TransactionObjectArgument, TransactionObjectArgument, TransactionObjectArgument];
+    tx.transferObjects([baseCoinOut, deepCoinOut], senderAddress);
+    return quoteCoinOut;
+  }
 }
 
 // ── Shared object helpers ──────────────────────────────────────────────────

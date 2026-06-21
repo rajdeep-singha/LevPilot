@@ -17,10 +17,10 @@ export const DEEPBOOK_POOLS: Record<string, string> = {
 // Source: MystenLabs/ts-sdks packages/deepbook-v3/src/utils/constants.ts
 export const COIN_TYPES: Record<string, string> = {
   SUI:    '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
-  // Testnet uses DBUSDC (DeepBook synthetic USDC) — treat as USDC in the app
-  USDC:   '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::dbusdc::DBUSDC',
-  // Testnet uses DBTC (DeepBook synthetic BTC) — treat as BTC in the app
-  BTC:    '0xe4099a9e60c10e52c42b8e5e8aaeb3e30c36e46d1cfd7dab9d44a3c0e8d1a87::dbtc::DBTC',
+  // Testnet uses DBUSDC (DeepBook synthetic USDC) — verified from on-chain pool type
+  USDC:   '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC',
+  // Testnet uses DBTC (DeepBook synthetic BTC)
+  BTC:    '0xe4099a9e60c10e52c42b8e5e8aaeb3e30c36e46d1cfd7dab9d44a3c0e8d1a87::DBTC::DBTC',
   // ETH has no pool on DeepBook v3 testnet — omitted
 };
 

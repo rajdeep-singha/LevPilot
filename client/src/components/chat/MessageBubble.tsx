@@ -1,6 +1,31 @@
-import type { ChatMessage } from '../../types/trade'
+import type { ChatMessage, ExecutionPlan } from '../../types/trade'
 import { TradeConfirm } from '../trade/TradeConfirm'
-import type { ExecutionPlan } from '../../types/trade'
+
+// Renders text and converts [label](url) markdown links to <a> tags
+function MessageContent({ text }: { text: string }) {
+  const parts = text.split(/(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g)
+  const elements: React.ReactNode[] = []
+  let i = 0
+  while (i < parts.length) {
+    const part = parts[i]
+    if (part.startsWith('[') && parts[i + 2]) {
+      // This is a full match — label is parts[i+1], url is parts[i+2]
+      elements.push(
+        <a key={i} href={parts[i + 2]} target="_blank" rel="noopener noreferrer"
+          className="text-emerald-400 underline hover:text-emerald-300">
+          {parts[i + 1]}
+        </a>
+      )
+      i += 3
+    } else if (!part.match(/^\[/) && !part.match(/^https?:\/\//)) {
+      if (part) elements.push(<span key={i}>{part}</span>)
+      i++
+    } else {
+      i++
+    }
+  }
+  return <>{elements}</>
+}
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -22,7 +47,7 @@ export function MessageBubble({ message, onApprove, onReject }: MessageBubblePro
               : 'bg-gray-800 text-gray-200 rounded-tl-sm'
           }`}
         >
-          {message.content}
+          <MessageContent text={message.content} />
         </div>
 
         {/* Inline plan card */}

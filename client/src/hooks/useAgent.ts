@@ -1,13 +1,19 @@
 import { useCallback } from 'react'
-import { useAgentStore, useWalletStore } from '../app/Store'
-import { agentChat, agentApprovePlan, agentRejectPlan, buildPTB, confirmTrade } from '../lib/api'
-import { signTransactionWithExtension } from '../lib/sui/wallet'
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit'
+import { Transaction } from '@mysten/sui/transactions'
+import { useAgentStore, useWalletStore, usePositionsStore } from '../app/Store'
+import { agentChat, agentApprovePlan, agentRejectPlan, buildPTB } from '../lib/api'
 import type { ExecutionPlan } from '../types/trade'
 
 export function useAgent() {
   const { messages, pendingPlan, isThinking, addMessage, setPendingPlan, setThinking, clearChat } =
     useAgentStore()
-  const address = useWalletStore((s) => s.address)
+  const { setPositions, positions } = usePositionsStore()
+  const manualAddress = useWalletStore((s) => s.address)
+  const currentAccount = useCurrentAccount()
+  // Use dapp-kit connected account when available, fall back to manual address for chat/risk only
+  const address = currentAccount?.address ?? manualAddress
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction()
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -45,38 +51,67 @@ export function useAgent() {
       if (!address) return { success: false, error: 'Connect wallet first' }
 
       try {
-        await agentApprovePlan(plan.id)
-        const ptb = await buildPTB(plan.id, address)
-
-        // Try extension signing
-        const signed = await signTransactionWithExtension(ptb.txBytes)
-        if (!signed) {
-          // No extension — just set the plan as approved and show PTB bytes
+        // Must have a real wallet extension connected — manual address is not enough to sign
+        if (!currentAccount) {
           addMessage({
             role: 'assistant',
-            content: `Plan approved. Sign the transaction in your wallet to execute.`,
+            content: 'Please connect your Sui wallet extension (not just an address) to sign transactions. Click "Connect Wallet" and choose your extension.',
+            type: 'ERROR',
           })
-          setPendingPlan({ ...plan, status: 'APPROVED' })
-          return { success: true }
+          return { success: false, error: 'Wallet extension required for signing' }
         }
 
-        const result = await confirmTrade(plan.id, ptb.txBytes, signed.signature)
+        await agentApprovePlan(plan.id)
+        const ptb = await buildPTB(plan.id, address!)
+
+        // Deserialise tx bytes and send to wallet for signing + execution
+        const txBytes = Uint8Array.from(atob(ptb.txBytes), (c) => c.charCodeAt(0))
+        const tx = Transaction.from(txBytes)
+
+        const result = await signAndExecute({ transaction: tx })
+
         addMessage({
           role: 'assistant',
-          content: result.success
-            ? `Trade executed! Tx: ${result.digest ?? 'confirmed'}`
-            : `Execution failed: ${result.error}`,
-          type: result.success ? 'PLAN' : 'ERROR',
+          content: `Trade executed! [View on SuiScan](https://suiscan.xyz/testnet/tx/${result.digest})`,
+          type: 'PLAN',
         })
+
+        // Save to local history so it shows on the History page
+        const intent = plan.intent as { action: string; asset: string; capital: number; leverage: number; collateral: string }
+        setPositions([
+          ...positions,
+          {
+            id: result.digest,
+            walletAddress: address!,
+            side: intent.action === 'SHORT' ? 'SHORT' : 'LONG',
+            asset: intent.asset,
+            collateralAsset: intent.collateral ?? 'SUI',
+            collateralAmount: intent.capital,
+            borrowedAmount: intent.capital * ((intent.leverage ?? 1) - 1),
+            entryPrice: 0,
+            currentPrice: 0,
+            leverage: intent.leverage ?? 1,
+            size: intent.capital * (intent.leverage ?? 1),
+            pnl: 0,
+            pnlPct: 0,
+            healthFactor: 1.5,
+            liquidationPrice: 0,
+            openedAt: Date.now(),
+            updatedAt: Date.now(),
+            status: 'CLOSED',
+            planId: result.digest,
+          },
+        ])
+
         setPendingPlan(null)
-        return { success: result.success, error: result.error }
+        return { success: true }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Approval failed'
         addMessage({ role: 'assistant', content: `Error: ${msg}`, type: 'ERROR' })
         return { success: false, error: msg }
       }
     },
-    [address, addMessage, setPendingPlan],
+    [address, signAndExecute, addMessage, setPendingPlan],
   )
 
   const rejectPlan = useCallback(

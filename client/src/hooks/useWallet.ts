@@ -1,38 +1,49 @@
-import { useCallback } from 'react'
+import { useCurrentAccount, useConnectWallet, useDisconnectWallet, useWallets } from '@mysten/dapp-kit'
 import { useWalletStore } from '../app/Store'
-import { isValidSuiAddress, shortenAddress, isSuiWalletAvailable, connectSuiWallet } from '../lib/sui/wallet'
+import { shortenAddress } from '../lib/sui/wallet'
 
 export function useWallet() {
-  const { address, connected, setAddress, disconnect } = useWalletStore()
+  const currentAccount = useCurrentAccount()
+  const { mutate: connectWallet } = useConnectWallet()
+  const { mutate: disconnectWallet } = useDisconnectWallet()
+  const wallets = useWallets()
+  const { address: manualAddress, setAddress, disconnect: clearManual } = useWalletStore()
 
-  const connectManual = useCallback(
-    (addr: string) => {
-      if (isValidSuiAddress(addr)) {
-        setAddress(addr)
-        return true
-      }
-      return false
-    },
-    [setAddress],
-  )
+  // Prefer dapp-kit connected account, fall back to manually entered address
+  const address = currentAccount?.address ?? manualAddress
+  const connected = !!address
 
-  const connectExtension = useCallback(async () => {
-    if (!isSuiWalletAvailable()) return false
-    const addr = await connectSuiWallet()
-    if (addr) {
+  const connectExtension = async (): Promise<boolean> => {
+    const wallet = wallets[0]
+    if (!wallet) return false
+    return new Promise((resolve) => {
+      connectWallet(
+        { wallet },
+        { onSuccess: () => resolve(true), onError: () => resolve(false) },
+      )
+    })
+  }
+
+  const connectManual = (addr: string): boolean => {
+    if (/^0x[0-9a-fA-F]{63,64}$/.test(addr)) {
       setAddress(addr)
       return true
     }
     return false
-  }, [setAddress])
+  }
+
+  const disconnect = () => {
+    disconnectWallet()
+    clearManual()
+  }
 
   return {
     address,
     connected,
     short: address ? shortenAddress(address) : null,
-    hasExtension: isSuiWalletAvailable(),
-    connectManual,
+    hasExtension: wallets.length > 0,
     connectExtension,
+    connectManual,
     disconnect,
   }
 }

@@ -69,7 +69,7 @@ Your job: extract structured intent from the user's message.
 Rules:
   • "2x long" → action=LONG, leverage=2
   • "low-risk" → risk=LOW ; "high risk" / "degen" → risk=HIGH ; default=MEDIUM
-  • No collateral mentioned → collateral=USDC
+  • No collateral mentioned → for LONG use the trade asset as collateral; for SHORT use USDC
   • Parse capital as USD number: "$500" → 500, "500 USDC" → 500
   • If capital, asset, or action is missing / ambiguous → needsClarification=true
   • EXIT / REDUCE intents don't need capital — set capital=0
@@ -90,11 +90,11 @@ interface RawToolInput {
   needsClarification: boolean;
   clarificationMessage?: string;
 }
-
+//Long SUI $10 at 2x
 export async function parseIntent(userMessage: string): Promise<IntentParseResult> {
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       system: SYSTEM_PROMPT,
       tools: [EXTRACT_INTENT_TOOL],
@@ -121,7 +121,7 @@ export async function parseIntent(userMessage: string): Promise<IntentParseResul
     const intent: TradeIntent = {
       action: input.action,
       asset: input.asset,
-      collateral: input.collateral ?? 'USDC',
+      collateral: input.collateral ?? (input.action === 'LONG' ? input.asset : 'USDC'),
       capital: input.capital,
       leverage: input.leverage ?? 1,
       risk: input.risk ?? 'MEDIUM',

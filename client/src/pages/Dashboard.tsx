@@ -19,6 +19,7 @@ import { AlertBanner } from '../components/rescue/AlertBanner'
 import { Modal } from '../components/common/Modal'
 import { Button } from '../components/common/Button'
 import { Spinner } from '../components/common/Spinner'
+import { useWallets, useConnectWallet } from '@mysten/dapp-kit'
 import { useWallet } from '../hooks/useWallet'
 import { usePositions } from '../hooks/usePositions'
 import { useRescue } from '../hooks/useRescue'
@@ -54,24 +55,26 @@ const ASSETS = ['SUI', 'BTC', 'USDC']
 // ── Wallet connect modal ───────────────────────────────────────────────────
 
 function WalletModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { connectManual, connectExtension, hasExtension } = useWallet()
+  const wallets = useWallets()
+  const { mutate: connectWallet } = useConnectWallet()
+  const { connectManual } = useWallet()
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
-  const [connecting, setConnecting] = useState(false)
+  const [connecting, setConnecting] = useState<string | null>(null)
 
-  async function handleExtension() {
-    setConnecting(true)
-    const ok = await connectExtension()
-    setConnecting(false)
-    if (ok) onClose()
-    else setError('No Sui wallet extension found or connection rejected.')
+  function handleConnect(wallet: (typeof wallets)[number]) {
+    setConnecting(wallet.name)
+    connectWallet(
+      { wallet },
+      {
+        onSuccess: () => { setConnecting(null); onClose() },
+        onError: () => { setConnecting(null); setError(`Failed to connect ${wallet.name}. Make sure the extension is unlocked.`) },
+      },
+    )
   }
 
   function handleManual() {
-    if (!isValidSuiAddress(input)) {
-      setError('Enter a valid Sui address (0x…)')
-      return
-    }
+    if (!isValidSuiAddress(input)) { setError('Enter a valid Sui address (0x…)'); return }
     connectManual(input)
     onClose()
   }
@@ -79,32 +82,64 @@ function WalletModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   return (
     <Modal open={open} onClose={onClose} title="Connect Wallet">
       <div className="space-y-4">
-        {hasExtension && (
-          <Button variant="primary" className="w-full" loading={connecting} onClick={handleExtension}>
-            Connect Sui Wallet Extension
-          </Button>
+
+        {/* Detected wallet extensions */}
+        {wallets.length > 0 ? (
+          <div className="space-y-2">
+            {wallets.map((wallet) => (
+              <button
+                key={wallet.name}
+                onClick={() => handleConnect(wallet)}
+                disabled={!!connecting}
+                className="w-full flex items-center gap-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
+              >
+                <img src={wallet.icon} alt={wallet.name} className="w-7 h-7 rounded-lg" />
+                <span className="text-sm text-white font-medium flex-1 text-left">{wallet.name}</span>
+                {connecting === wallet.name && <Spinner size="sm" />}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-gray-700 p-4 space-y-3 text-center">
+            <p className="text-sm text-gray-400">No Sui wallet detected in your browser.</p>
+            <div className="space-y-1.5">
+              <a
+                href="https://phantom.app/download"
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                <span className="text-base">👻</span> Install Phantom <span className="text-xs opacity-60">↗</span>
+              </a>
+              <a
+                href="https://suiwallet.com"
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span className="text-base">🌊</span> Install Sui Wallet <span className="text-xs opacity-60">↗</span>
+              </a>
+            </div>
+            <p className="text-[11px] text-gray-600">MetaMask does not support Sui network.</p>
+          </div>
         )}
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-gray-700" />
-          <span className="text-xs text-gray-500">or enter address manually</span>
+          <span className="text-xs text-gray-500">or read-only mode</span>
           <div className="flex-1 h-px bg-gray-700" />
         </div>
 
         <input
           type="text"
-          placeholder="0x..."
+          placeholder="0x… paste your Sui address"
           value={input}
           onChange={(e) => { setInput(e.target.value); setError('') }}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50"
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
         <Button variant="outline" className="w-full" onClick={handleManual}>
-          Connect with Address
+          View-only (no signing)
         </Button>
-        <p className="text-[11px] text-gray-600 text-center">
-          Manual mode: agent & positions work fully. Signing requires a wallet extension.
-        </p>
+
       </div>
     </Modal>
   )

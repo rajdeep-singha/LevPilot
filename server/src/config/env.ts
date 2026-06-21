@@ -18,23 +18,27 @@ const EnvSchema = z.object({
   SUI_NETWORK: z.enum(['testnet', 'mainnet', 'devnet', 'localnet']).default('testnet'),
   SUI_RPC_URL: z.string().optional(),
 
-  // DeepBook testnet
+  // DeepBook testnet — verified from MystenLabs/ts-sdks packages/deepbook-v3/src/utils/constants.ts
   DEEPBOOK_PACKAGE_ID: z
     .string()
-    .default('0x000000000000000000000000000000000000000000000000000000000000dee9'),
+    .default('0xfb28c4cbc6865bd1c897d26aecbe1f8792d1509a20ffec692c800660cbec6982'),
   DEEPBOOK_REGISTRY_ID: z
     .string()
-    .default('0xaf16199a2dff736e9f07a845f23c5da6df6f756eddb631aed9d24a93efc4549d'),
+    .default('0x7c256edbda983a2cd6f946655f4bf3f00a41043993781f8674a7046e8c0e11d1'),
 
-  // Scallop testnet — verified from scallop-io/sui-scallop-sdk src/constants/testAddress.ts
+  // Scallop testnet — verified from scallop-io/sui-scallop-sdk src/constants/testAddress.ts (develop branch)
   // core.packages.protocol.id → used as packageId for all Move calls
   SCALLOP_PACKAGE_ID: z
     .string()
-    .default('0xb03fa00e2d9f17d78a9d48bd94d8852abec68c19d55e819096b1e062e69bfad1'),
+    .default('0xd971609b7feb6230585831e7aeb3c121fb21b9431337a30fc99185eb459a05ee'),
   // core.version → first arg to every Scallop Move call
   SCALLOP_VERSION_ID: z
     .string()
-    .default('0xee15d07800e2ad4852505c57cd86afea774af02c17388f8bd907de75f915b4f4'),
+    .default('0x72bc09c4ce413d76d07f6e712413aebbe3ce3747eadfbc2331fbdb1dbde2d43a'),
+  // core.market → Market shared object
+  SCALLOP_MARKET_ID: z
+    .string()
+    .default('0xed80ed898df1e0b7a14b78c92527b47ef88591d5722ded16050d7e101687bb20'),
 
   // Pyth oracle testnet
   PYTH_STATE_ID: z
