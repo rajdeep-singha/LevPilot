@@ -19,7 +19,12 @@ import { initRiskEngine } from './engines/risk/riskEngine.js';
 const app = express();
 
 // ── Global middleware ──────────────────────────────────────────────────────
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'] }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: '1mb' }));
 app.use(optionalAuth);
 
