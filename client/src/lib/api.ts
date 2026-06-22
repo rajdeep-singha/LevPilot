@@ -99,6 +99,10 @@ export async function getPositions(address: string): Promise<Position[]> {
   return req<Position[]>(`/positions/${address}`)
 }
 
+export async function getAllPositions(address: string): Promise<Position[]> {
+  return req<Position[]>(`/positions/${address}/all`)
+}
+
 export async function getPosition(address: string, positionId: string): Promise<Position> {
   return req<Position>(`/positions/${address}/${positionId}`)
 }
