@@ -22,7 +22,9 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://lev-pilot.vercel.app',
   ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()) : []),
 ];
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: '1mb' }));
