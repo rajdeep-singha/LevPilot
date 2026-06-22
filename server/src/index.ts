@@ -41,6 +41,27 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', network: env.SUI_NETWORK, ts: Date.now() });
 });
 
+// ── Sui RPC proxy ──────────────────────────────────────────────────────────
+// The Sui fullnode doesn't set CORS headers for arbitrary origins, so browser
+// requests from lev-pilot.vercel.app are blocked. We proxy here — the server
+// has no CORS restriction calling the fullnode, and our CORS middleware above
+// already allows the Vercel frontend to call this server.
+const SUI_FULLNODE = `https://fullnode.${env.SUI_NETWORK}.sui.io:443`;
+
+app.post('/rpc', async (req, res, next) => {
+  try {
+    const upstream = await fetch(SUI_FULLNODE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Feature routes ─────────────────────────────────────────────────────────
 app.post('/auth/challenge', handleAuthChallenge);
 app.post('/auth/verify', handleAuthVerify);
