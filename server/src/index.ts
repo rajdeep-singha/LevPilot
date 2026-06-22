@@ -19,14 +19,20 @@ import { initRiskEngine } from './engines/risk/riskEngine.js';
 const app = express();
 
 // ── Global middleware ──────────────────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://lev-pilot.vercel.app',
-  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
-  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()) : []),
-];
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow localhost for dev
+    if (origin.startsWith('http://localhost')) return callback(null, true);
+    // Allow all vercel.app deployments (covers preview URLs too)
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    // Allow custom CLIENT_URL if set
+    if (process.env.CLIENT_URL && origin === process.env.CLIENT_URL) return callback(null, true);
+    console.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(optionalAuth);
 
