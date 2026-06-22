@@ -112,6 +112,28 @@ positionsRouter.get('/:address', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /positions/:address/all
+ * Returns ALL positions (any status) for a wallet — used to hydrate client-side trade history.
+ * Must be registered before /:address/:positionId to avoid route shadowing.
+ */
+positionsRouter.get('/:address/all', (req: Request, res: Response) => {
+  const parsed = z
+    .object({ address: z.string().startsWith('0x') })
+    .safeParse({ address: req.params.address });
+
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid wallet address' });
+  }
+
+  const { address } = parsed.data;
+  const positions = Array.from(positionStore.values()).filter(
+    (p) => p.walletAddress === address,
+  );
+
+  return res.json(positions);
+});
+
+/**
  * GET /positions/:address/:positionId
  * Returns a single position by ID.
  */
